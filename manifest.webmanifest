@@ -1,0 +1,14 @@
+{
+  "name": "KKontrol — Laser Engraver Control",
+  "short_name": "KKontrol",
+  "description": "Open-source browser-based laser engraver control.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d141d",
+  "theme_color": "#111923",
+  "orientation": "any",
+  "icons": [
+    { "src": "./icons/kkontrol.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

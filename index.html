@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111923">
+  <meta name="description" content="KKontrol — open-source laser engraver control in your browser.">
+  <title>KKontrol — Laser Engraver Control</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/kkontrol.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="KKontrol home">
+      <span class="brand-mark" aria-hidden="true"><span></span></span>
+      <span class="brand-name">K<span>K</span>ontrol</span>
+    </a>
+    <div class="topbar-right">
+      <span class="version">EARLY ACCESS · 0.1.0</span>
+      <span id="browserSupport" class="support-pill">Checking WebSerial…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">OPEN SOURCE LASER ENGRAVING</p>
+        <h1>Make it.<br><em>Engrave it.</em></h1>
+        <p class="intro-copy">Prepare text and images, connect your engraver over USB, and send raster jobs directly from your browser.</p>
+      </div>
+      <div class="intro-note"><span class="note-dot"></span> No server. Uses your OS USB-serial driver. Your design stays on this device.</div>
+    </section>
+
+    <section class="connection panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">DEVICE</p>
+          <h2>Connection</h2>
+        </div>
+        <div id="connectionStatus" class="status-chip offline"><span></span> Disconnected</div>
+      </div>
+      <div class="connection-row">
+        <label class="field protocol-field">
+          <span>Protocol</span>
+          <select id="protocolSelect">
+            <option value="k3">K3 / K5 · RBEGamer raster protocol</option>
+            <option value="legacy">KKengraver · legacy protocol (experimental)</option>
+          </select>
+        </label>
+        <button id="connectButton" class="button primary">Connect engraver</button>
+      </div>
+      <p id="deviceInfo" class="hint">Select a protocol, then connect your USB-serial controller. No homing command is sent.</p>
+    </section>
+
+    <div class="workspace">
+      <section class="panel design-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">01 · DESIGN</p>
+            <h2>Artwork</h2>
+          </div>
+          <div class="tab-switch" role="tablist" aria-label="Artwork type">
+            <button class="tab active" id="textTab" role="tab" aria-selected="true">Text</button>
+            <button class="tab" id="imageTab" role="tab" aria-selected="false">Image</button>
+          </div>
+        </div>
+
+        <div id="textControls" class="editor-controls">
+          <label class="field">
+            <span>Text</span>
+            <textarea id="textInput" rows="3" maxlength="500" spellcheck="false">KKontrol</textarea>
+          </label>
+          <div class="form-grid two">
+            <label class="field">
+              <span>Font family</span>
+              <select id="fontSelect">
+                <option value="Arial">Arial</option>
+                <option value="DejaVu Sans">DejaVu Sans</option>
+                <option value="Liberation Sans">Liberation Sans</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Courier New">Courier New</option>
+                <option value="monospace">Monospace</option>
+                <option value="serif">Serif</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Font size <b id="fontSizeValue">42 px</b></span>
+              <input id="fontSize" type="range" min="8" max="180" value="42">
+            </label>
+          </div>
+          <div class="form-grid two">
+            <label class="field">
+              <span>Text alignment</span>
+              <select id="textAlign">
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </label>
+            <label class="field upload-field">
+              <span>Load your own font (.ttf / .otf)</span>
+              <input id="fontFile" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2">
+            </label>
+          </div>
+          <p id="fontStatus" class="hint compact">System fonts are used locally by your browser.</p>
+        </div>
+
+        <div id="imageControls" class="editor-controls hidden">
+          <label class="field upload-field file-drop">
+            <span>Image file</span>
+            <input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp,image/bmp">
+            <small>PNG, JPG, WebP or BMP</small>
+          </label>
+          <div id="imageName" class="hint compact">No image selected.</div>
+        </div>
+
+        <div class="form-grid two size-grid">
+          <label class="field">
+            <span>Output width <b>pixels</b></span>
+            <input id="widthPx" type="number" min="8" max="1600" step="1" value="250">
+          </label>
+          <div class="dimension-readout">
+            <span>Estimated size at 500 DPI</span>
+            <strong id="physicalSize">12.7 × 12.7 mm</strong>
+            <small id="pixelSize">250 × 250 px</small>
+          </div>
+        </div>
+
+        <div class="field threshold-field">
+          <div class="range-heading"><span>Black / white threshold</span><b id="thresholdValue">150</b></div>
+          <input id="threshold" type="range" min="0" max="255" value="150">
+          <div class="range-labels"><span>Darker</span><span>Lighter</span></div>
+        </div>
+
+        <div class="preview-wrap">
+          <div class="preview-heading"><span>Raster preview</span><span id="previewMeta">Waiting for artwork</span></div>
+          <div class="preview-stage">
+            <canvas id="previewCanvas" width="250" height="250" aria-label="Black and white engraving preview"></canvas>
+            <div id="emptyPreview" class="empty-preview"><span class="empty-icon">◌</span><strong>Your preview will appear here</strong><small>Enter text or load an image</small></div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button id="previewButton" class="button secondary">Refresh preview</button>
+          <button id="dryRunButton" class="button ghost">Build dry-run</button>
+        </div>
+      </section>
+
+      <aside class="side-column">
+        <section class="panel settings-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">02 · JOB</p>
+              <h2>Engraving settings</h2>
+            </div>
+          </div>
+          <label class="field">
+            <span>Depth / laser on-time <b id="depthValue">10</b></span>
+            <input id="depth" type="range" min="1" max="255" value="10">
+            <small class="hint">K3/K5 protocol value. Start conservatively; material and focus matter.</small>
+          </label>
+          <div id="k3PowerNote" class="info-box">K3/K5 protocol currently sends the documented 1000 mW field. The source protocol notes that changing this value had no visible effect on its model.</div>
+          <div id="legacyPowerControl" class="field hidden">
+            <div class="range-heading"><span>Legacy power parameter</span><b id="powerValue">100%</b></div>
+            <input id="power" type="range" min="0" max="100" value="100">
+            <small class="hint">Legacy protocol parameter only. It is not a calibrated optical power measurement.</small>
+          </div>
+          <label class="toggle-row">
+            <span><strong>Cooling fan</strong><small>Switch on when starting a job</small></span>
+            <input id="fanEnabled" type="checkbox" checked>
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+          <div class="divider"></div>
+          <p class="eyebrow">MANUAL MOVEMENT</p>
+          <div class="jog-control">
+            <button class="jog-btn" data-x="0" data-y="100" aria-label="Move up">↑</button>
+            <button class="jog-btn" data-x="-100" data-y="0" aria-label="Move left">←</button>
+            <span class="jog-btn center jog-center" aria-hidden="true">XY</span>
+            <button class="jog-btn" data-x="100" data-y="0" aria-label="Move right">→</button>
+            <button class="jog-btn" data-x="0" data-y="-100" aria-label="Move down">↓</button>
+          </div>
+          <label class="field jog-step-field">
+            <span>Jog distance <b id="jogValue">10 steps</b></span>
+            <input id="jogStep" type="range" min="1" max="500" value="10">
+          </label>
+          <p class="hint compact">No homing or automatic positioning is provided in this version. Know the head position and keep clear of mechanical limits.</p>
+        </section>
+
+        <section class="panel run-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">03 · OUTPUT</p>
+              <h2>Send to engraver</h2>
+            </div>
+          </div>
+          <div class="safety-card">
+            <strong>Before every job</strong>
+            <p>Use suitable laser eye protection, keep the enclosure closed, ensure extraction and fire supervision, and only engrave known laser-safe materials. Never leave the machine unattended.</p>
+          </div>
+          <label class="confirm-row">
+            <input id="safetyConfirm" type="checkbox">
+            <span>I have checked the machine, material, focus and work area. I am ready to operate the laser.</span>
+          </label>
+          <button id="engraveButton" class="button danger" disabled>Start engraving</button>
+          <p class="hint compact">Live output requires an explicit safety confirmation. Use the physical power switch for an emergency stop.</p>
+          <div class="progress-area">
+            <div class="progress-heading"><span id="jobStatus">No active job</span><b id="progressPercent">0%</b></div>
+            <div class="progress-track"><span id="progressBar"></span></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <section class="panel log-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">DIAGNOSTICS</p>
+          <h2>Activity log</h2>
+        </div>
+        <button id="clearLogButton" class="button small ghost">Clear</button>
+      </div>
+      <pre id="logOutput" aria-live="polite">KKontrol 0.1.0 ready. Choose a protocol and connect your engraver.</pre>
+    </section>
+
+    <footer class="footer">
+      <span>KKontrol · Open source laser engraver control</span>
+      <span>Runs locally in your browser. No cloud processing.</span>
+    </footer>
+  </main>
+
+  <dialog id="confirmDialog" class="confirm-dialog">
+    <div class="dialog-content">
+      <p class="eyebrow">FINAL CHECK</p>
+      <h2>Ready to start?</h2>
+      <p id="dialogSummary">Review the job dimensions and settings before sending data.</p>
+      <div class="dialog-warning">The controller can activate the laser during this operation. Do not look into the beam or leave the machine unattended.</div>
+      <div class="dialog-actions">
+        <button id="cancelJobButton" class="button secondary">Cancel</button>
+        <button id="confirmJobButton" class="button danger">Confirm and send</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

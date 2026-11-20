@@ -1,4 +1,5 @@
 import { buildK3RowPacket, hasBlackPixels, validateRaster } from "../raster.js";
+import { FRAME_MAX_STEPS, FRAME_STOP_COMMAND, buildFramePacket } from "./frame.js";
 
 const ACK = [0x09];
 const command4 = opcode => [opcode, 0x00, 0x04, 0x00];
@@ -6,6 +7,7 @@ const command4 = opcode => [opcode, 0x00, 0x04, 0x00];
 export const K3Protocol = {
   id: "k3",
   name: "K3 / K5 raster protocol",
+  maxFrameSteps: FRAME_MAX_STEPS,
   async connect(transport) {
     // K3 protocol: a four-byte connect command, acknowledged with byte 0x09.
     await transport.command([0x0a, 0x00, 0x04, 0x00, 0xff, 0x00, 0x04, 0x00], ACK, 5000, "known-good K3/K5 connect sequence");
@@ -19,6 +21,12 @@ export const K3Protocol = {
       (dx >> 8) & 0xff, dx & 0xff,
       (dy >> 8) & 0xff, dy & 0xff
     ], ACK, 5000, `move ${dx},${dy}`);
+  },
+  async startFrame(transport, width, height) {
+    await transport.command(buildFramePacket(width, height), ACK, 5000, "K3/K5 frame start");
+  },
+  async stopFrame(transport) {
+    await transport.command(FRAME_STOP_COMMAND, ACK, 5000, "K3/K5 frame stop");
   },
   async engrave(transport, raster, settings, onProgress = () => {}) {
     validateRaster(raster);

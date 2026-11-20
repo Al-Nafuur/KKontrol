@@ -23,15 +23,6 @@
   </header>
 
   <main class="layout">
-    <section class="intro">
-      <div>
-        <p class="eyebrow">OPEN SOURCE LASER ENGRAVING</p>
-        <h1>Make it.<br><em>Engrave it.</em></h1>
-        <p class="intro-copy">Prepare text and images, connect your engraver over USB, and send raster jobs directly from your browser.</p>
-      </div>
-      <div class="intro-note"><span class="note-dot"></span> No server. Uses your OS USB-serial driver. Your design stays on this device.</div>
-    </section>
-
     <section class="connection panel">
       <div class="panel-heading">
         <div>
@@ -50,7 +41,11 @@
         </label>
         <button id="connectButton" class="button primary">Connect engraver</button>
       </div>
-      <p id="deviceInfo" class="hint">Select a protocol, then connect your USB-serial controller. No homing command is sent.</p>
+      <label class="confirm-row home-confirm-row">
+        <input id="homeConfirm" type="checkbox">
+        <span id="homeConfirmText">Before connecting, manually position the head at Home (upper-left).</span>
+      </label>
+      <p id="deviceInfo" class="hint">Select a protocol. The app cannot home the machine or detect its position.</p>
     </section>
 
     <div class="workspace">
@@ -134,13 +129,38 @@
           <div class="range-labels"><span>Darker</span><span>Lighter</span></div>
         </div>
 
+        <div class="form-grid two work-area-fields">
+          <label class="field">
+            <span>Laser area width <b>mm</b></span>
+            <input id="areaWidthMm" type="number" min="1" max="80" step="0.01" value="80">
+          </label>
+          <label class="field">
+            <span>Laser area height <b>mm</b></span>
+            <input id="areaHeightMm" type="number" min="1" max="80" step="0.01" value="80">
+          </label>
+        </div>
+        <div class="form-grid two artwork-position-fields">
+          <label class="field">
+            <span>Artwork X from Home <b>mm</b></span>
+            <input id="positionXmm" type="number" min="0" max="80" step="0.05" value="0">
+          </label>
+          <label class="field">
+            <span>Artwork Y from Home <b>mm</b></span>
+            <input id="positionYmm" type="number" min="0" max="80" step="0.05" value="0">
+          </label>
+        </div>
+        <p id="positionInfo" class="hint compact">Artwork position is measured from Home at the upper-left.</p>
         <div class="preview-wrap">
-          <div class="preview-heading"><span>Raster preview</span><span id="previewMeta">Waiting for artwork</span></div>
+          <div class="preview-heading"><span>Raster preview · work area</span><span id="previewMeta">Waiting for artwork</span></div>
           <div class="preview-stage">
-            <canvas id="previewCanvas" width="250" height="250" aria-label="Black and white engraving preview"></canvas>
-            <div id="emptyPreview" class="empty-preview"><span class="empty-icon">◌</span><strong>Your preview will appear here</strong><small>Enter text or load an image</small></div>
+            <div id="workArea" class="work-area" aria-label="Laser work area; drag artwork to position it">
+              <canvas id="previewCanvas" width="250" height="250" aria-label="Draggable black and white engraving artwork"></canvas>
+              <span id="positionMarker" class="position-marker hidden" aria-hidden="true"></span>
+              <div id="emptyPreview" class="empty-preview"><span class="empty-icon">◌</span><strong>Your preview will appear here</strong><small>Enter text or load an image</small></div>
+            </div>
           </div>
         </div>
+        <p class="hint compact">Drag the artwork inside the area to position it. The machine moves there only when the job starts.</p>
         <div class="action-row">
           <button id="previewButton" class="button secondary">Refresh preview</button>
           <button id="dryRunButton" class="button ghost">Build dry-run</button>
@@ -178,17 +198,18 @@
           <div class="divider"></div>
           <p class="eyebrow">MANUAL MOVEMENT</p>
           <div class="jog-control">
-            <button class="jog-btn" data-x="0" data-y="100" aria-label="Move up">↑</button>
+            <button class="jog-btn" data-x="0" data-y="-100" aria-label="Move up">↑</button>
             <button class="jog-btn" data-x="-100" data-y="0" aria-label="Move left">←</button>
             <span class="jog-btn center jog-center" aria-hidden="true">XY</span>
             <button class="jog-btn" data-x="100" data-y="0" aria-label="Move right">→</button>
-            <button class="jog-btn" data-x="0" data-y="-100" aria-label="Move down">↓</button>
+            <button class="jog-btn" data-x="0" data-y="100" aria-label="Move down">↓</button>
           </div>
+          <button id="markHomeButton" class="button secondary home-button" disabled>Confirm head is at Home</button>
           <label class="field jog-step-field">
             <span>Jog distance <b id="jogValue">10 steps</b></span>
             <input id="jogStep" type="range" min="1" max="500" value="10">
           </label>
-          <p class="hint compact">No homing or automatic positioning is provided in this version. Know the head position and keep clear of mechanical limits.</p>
+          <p id="headPositionHint" class="hint compact">Manually return the head to Home and confirm it before reconnecting or jogging.</p>
         </section>
 
         <section class="panel run-panel">
@@ -201,6 +222,10 @@
           <div class="safety-card">
             <strong>Before every job</strong>
             <p>Use suitable laser eye protection, keep the enclosure closed, ensure extraction and fire supervision, and only engrave known laser-safe materials. Never leave the machine unattended.</p>
+          </div>
+          <div class="frame-control">
+            <button id="frameToggleButton" class="button secondary" disabled>Show alignment frame</button>
+            <p id="frameStatus" class="hint compact">Alignment frame starts at the artwork's upper-left.</p>
           </div>
           <label class="confirm-row">
             <input id="safetyConfirm" type="checkbox">

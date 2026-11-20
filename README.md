@@ -15,9 +15,12 @@ KKontrol is a static Progressive Web App (PWA). It uses the Web Serial API to ta
 - PNG, JPEG, WebP and BMP image input
 - Black/white thresholding and raster preview
 - Output dimensions at the documented 500 DPI scale
+- Adjustable laser-area dimensions and draggable artwork placement
+- Alignment-frame mode for positioning the workpiece
 - Dry-run report download
 - Manual cooling fan toggle
 - Manual relative jog controls
+- Virtual head-position tracking from a manually confirmed Home position
 - Offline app shell through a service worker
 - No automatic homing
 
@@ -51,10 +54,13 @@ Then open `http://localhost:8000/` in a supported browser.
 1. Connect the engraver by USB.
 2. Close any other application using its serial port (for example `kkengraver`, a Windows control app, a serial monitor, or another browser tab).
 3. Open KKontrol over HTTPS or localhost.
-4. Select the protocol profile before connecting.
-5. Click **Connect engraver** and choose the USB serial device in the browser dialog.
+4. Manually position the head at the machine's upper-left Home position and confirm this in the app.
+5. Select the protocol profile before connecting.
+6. Click **Connect engraver** and choose the USB serial device in the browser dialog.
 
 The port is opened at 115200 baud, 8 data bits, no parity and 1 stop bit. The browser asks the user to grant access; KKontrol does not enumerate arbitrary OS devices outside that chooser. The operating system still needs its USB-to-serial driver (for example, the CH340 driver on your machine).
+
+The configured laser area defaults to the verified 80 × 80 mm and can be reduced in the artwork panel. Position tracking is virtual: the app cannot home the machine or read its physical position. It assumes the head is at the manually confirmed upper-left Home, tracks jog commands with positive Y moving down, moves to the artwork's upper-left origin before a job, and marks position unknown after engraving. Manually return the head to Home and confirm it before continuing.
 
 ## Protocol profiles
 
@@ -64,11 +70,13 @@ Based on the published K3 serial protocol description and the working test perfo
 
 The K3/K5 raster row header contains opcode `0x09`, total row-packet length, depth/on-time, the documented 1000 mW field, and the current raster Y row. Pixels are packed MSB-first; dark pixels are set bits. The 1000 mW field is kept fixed in this version because the protocol source notes that changing it had no visible effect on its hardware.
 
-No homing command is issued. Raster start is relative to the controller's current position with zero offset; the operator must position the head and ensure there is enough travel room.
+No homing command is issued. Raster start is relative to the controller's current position with zero offset; the operator must manually position and confirm the head at Home and ensure there is enough travel room. The app tracks only commands it sends, not movement performed outside the UI.
 
 ### KKengraver legacy (experimental)
 
 Based on the public `aquamorta/kkengraver` protocol implementation. It sends the 8-byte connect sequence, expects one `0x09` ACK and deliberately does not wait for the firmware-version bytes (some devices do not return them). The profile uses the 15-byte `0x23` header, `0x22` row records with a checksum, then the documented end records. It expects the normal one-byte `0x09` ACK after each row, as in the original `kkengraver` transport method.
+
+Both profiles can send the controller's repeating alignment-frame commands (start `0x20`, stop `0x21`); these were observed working on the K5 through the legacy profile. The frame starts at the artwork's upper-left corner, matching the machine's Home origin; positive Y moves down. After stopping, the app moves the head back to its previously tracked position with a relative jog instead of sending a Home command. Frame dimensions are limited to 1575 steps per side. The K3/K5-profile connection path has not yet been hardware-validated for framing.
 
 This profile has not been validated on the project owner's hardware and should be treated as experimental.
 
@@ -81,14 +89,15 @@ Laser engravers can cause permanent eye injury, fire and harmful fumes. This sof
 - Do not engrave PVC, vinyl or unknown materials.
 - Keep a physical means of cutting machine power within reach.
 - Do not use the software's browser disconnect as an emergency stop.
-- The application does not send a home command. The head's absolute position is unknown to the UI; position the head manually and leave adequate mechanical clearance.
+- The alignment frame can keep moving until explicitly stopped. Keep the enclosure closed and use the physical power switch if the software cannot stop it.
+- The application does not send a home command or read physical coordinates. Its virtual position depends on manually confirming Home and tracking only movements sent by the app; re-confirm Home after every engraving job or any external movement.
 - Start with conservative settings on known laser-safe scrap material.
 
 Live output is deliberately gated by an explicit safety checkbox and a confirmation dialog. That is an operator reminder, not a hardware interlock.
 
 ## Development checks
 
-Run the packet-construction unit tests with Node.js:
+Run the unit tests with Node.js:
 
 ```bash
 node --test tests/protocol.test.mjs

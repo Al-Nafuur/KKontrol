@@ -1,4 +1,4 @@
-const CACHE_NAME = "kkontrol-v0.1.0";
+const CACHE_NAME = "kkontrol-v0.1.3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,8 +8,10 @@ const APP_SHELL = [
   "./js/app.js",
   "./js/serial.js",
   "./js/raster.js",
+  "./js/position.js",
   "./js/protocols/k3.js",
-  "./js/protocols/legacy.js"
+  "./js/protocols/legacy.js",
+  "./js/protocols/frame.js"
 ];
 
 self.addEventListener("install", event => {

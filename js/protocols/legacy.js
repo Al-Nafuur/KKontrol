@@ -1,4 +1,5 @@
 import { buildLegacyRowPacket, validateRaster } from "../raster.js";
+import { FRAME_MAX_STEPS, FRAME_STOP_COMMAND, buildFramePacket } from "./frame.js";
 
 const ACK = [0x09];
 const HEADER_ACK = [0xff, 0xff, 0xff, 0xfe];
@@ -20,6 +21,7 @@ export function buildLegacyHeader(width, height, depth, powerPercent) {
 export const LegacyProtocol = {
   id: "legacy",
   name: "KKengraver legacy protocol",
+  maxFrameSteps: FRAME_MAX_STEPS,
   async connect(transport) {
     // Original kkengraver CONNECT sequence; firmware-version bytes are not required.
     await transport.command([0x0a, 0x00, 0x04, 0x00, 0xff, 0x00, 0x04, 0x00], ACK, 5000, "legacy connect");
@@ -33,6 +35,12 @@ export const LegacyProtocol = {
       (dx >> 8) & 0xff, dx & 0xff,
       (dy >> 8) & 0xff, dy & 0xff
     ], ACK, 5000, `move ${dx},${dy}`);
+  },
+  async startFrame(transport, width, height) {
+    await transport.command(buildFramePacket(width, height), ACK, 5000, "legacy frame start");
+  },
+  async stopFrame(transport) {
+    await transport.command(FRAME_STOP_COMMAND, ACK, 5000, "legacy frame stop");
   },
   async engrave(transport, raster, settings, onProgress = () => {}) {
     validateRaster(raster);

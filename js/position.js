@@ -1,7 +1,7 @@
 import { STEPS_PER_MM, mmToSteps } from "./raster.js";
 
-export const MAX_WORK_AREA_DIMENSION_MM = 80;
-export const DEFAULT_WORK_AREA = { width: 80, height: 80 };
+export const MAX_WORK_AREA_MM = { width: 79.68, height: 75.696 };
+export const DEFAULT_WORK_AREA = { ...MAX_WORK_AREA_MM };
 
 export function artworkFitsArea(artwork, area) {
   return artwork.width <= area.width && artwork.height <= area.height;

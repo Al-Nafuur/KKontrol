@@ -5,7 +5,7 @@ import { buildLegacyHeader, LegacyProtocol } from "../js/protocols/legacy.js";
 import { K3Protocol } from "../js/protocols/k3.js";
 import { FRAME_MAX_STEPS, buildFramePacket } from "../js/protocols/frame.js";
 import {
-  DEFAULT_WORK_AREA, MAX_WORK_AREA_DIMENSION_MM, artworkFitsArea, clampArtworkPosition,
+  DEFAULT_WORK_AREA, MAX_WORK_AREA_MM, artworkFitsArea, clampArtworkPosition,
   uiPositionToMachineSteps, getJogDeltaToPosition,
   machineStepsToUiPosition, isMachinePositionWithinArea
 } from "../js/position.js";
@@ -77,9 +77,9 @@ test("both protocols send the fan on and off commands", async () => {
   }
 });
 
-test("work area defaults to the verified 80 by 80 mm K5 dimensions", () => {
-  assert.deepEqual(DEFAULT_WORK_AREA, { width: 80, height: 80 });
-  assert.equal(MAX_WORK_AREA_DIMENSION_MM, 80);
+test("work area defaults to the measured K5 dimensions", () => {
+  assert.deepEqual(DEFAULT_WORK_AREA, { width: 79.68, height: 75.696 });
+  assert.deepEqual(MAX_WORK_AREA_MM, { width: 79.68, height: 75.696 });
 });
 
 test("upper-left artwork coordinates map downward to positive machine Y", () => {

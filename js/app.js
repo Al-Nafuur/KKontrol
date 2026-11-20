@@ -3,7 +3,7 @@ import { K3Protocol } from "./protocols/k3.js";
 import { LegacyProtocol } from "./protocols/legacy.js";
 import { DPI, MAX_HEIGHT, MAX_WIDTH, pixelsToMm, getBlackRows, validateRaster } from "./raster.js";
 import {
-  DEFAULT_WORK_AREA, MAX_WORK_AREA_DIMENSION_MM, artworkFitsArea, clampArtworkPosition,
+  DEFAULT_WORK_AREA, MAX_WORK_AREA_MM, artworkFitsArea, clampArtworkPosition,
   uiPositionToMachineSteps, getJogDeltaToPosition,
   machineStepsToUiPosition, isMachinePositionWithinArea
 } from "./position.js";
@@ -232,10 +232,10 @@ function updateWorkAreaFromInputs() {
   const width = Number(els.areaWidthMm.value);
   const height = Number(els.areaHeightMm.value);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1 ||
-      width > MAX_WORK_AREA_DIMENSION_MM || height > MAX_WORK_AREA_DIMENSION_MM) {
+      width > MAX_WORK_AREA_MM.width || height > MAX_WORK_AREA_MM.height) {
     els.areaWidthMm.value = state.workArea.width.toFixed(2);
-    els.areaHeightMm.value = state.workArea.height.toFixed(2);
-    log(`Laser area dimensions must be between 1 and ${MAX_WORK_AREA_DIMENSION_MM} mm.`, "ERROR");
+    els.areaHeightMm.value = state.workArea.height.toFixed(3);
+    log(`Laser area cannot exceed ${MAX_WORK_AREA_MM.width} × ${MAX_WORK_AREA_MM.height} mm.`, "ERROR");
     return;
   }
   state.workArea = { width, height };

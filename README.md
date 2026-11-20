@@ -60,7 +60,7 @@ Then open `http://localhost:8000/` in a supported browser.
 
 The port is opened at 115200 baud, 8 data bits, no parity and 1 stop bit. The browser asks the user to grant access; KKontrol does not enumerate arbitrary OS devices outside that chooser. The operating system still needs its USB-to-serial driver (for example, the CH340 driver on your machine).
 
-The configured laser area defaults to the verified 80 × 80 mm and can be reduced in the artwork panel. Position tracking is virtual: the app cannot home the machine or read its physical position. It assumes the head is at the manually confirmed upper-left Home, tracks jog commands with positive Y moving down, moves to the artwork's upper-left origin before a job, and marks position unknown after engraving. Manually return the head to Home and confirm it before continuing.
+The configured laser area defaults to 79.68 × 75.696 mm, based on measurements in the Windows software, and can be reduced in the artwork panel. Position tracking is virtual: the app cannot home the machine or read its physical position. It assumes the head is at the manually confirmed upper-left Home, tracks jog commands with positive Y moving down, moves to the artwork's upper-left origin before a job, and marks position unknown after engraving. Manually return the head to Home and confirm it before continuing.
 
 ## Protocol profiles
 

@@ -16,6 +16,7 @@ KKontrol is a static Progressive Web App (PWA). It uses the Web Serial API to ta
 - Black/white thresholding and raster preview
 - Output dimensions at the documented 500 DPI scale
 - Dry-run report download
+- Manual cooling fan toggle
 - Manual relative jog controls
 - Offline app shell through a service worker
 - No automatic homing

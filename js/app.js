@@ -14,6 +14,7 @@ const els = {
   previewCanvas: $("#previewCanvas"), emptyPreview: $("#emptyPreview"), previewMeta: $("#previewMeta"), previewButton: $("#previewButton"), dryRunButton: $("#dryRunButton"),
   depth: $("#depth"), depthValue: $("#depthValue"), power: $("#power"), powerValue: $("#powerValue"),
   k3PowerNote: $("#k3PowerNote"), legacyPowerControl: $("#legacyPowerControl"), fanEnabled: $("#fanEnabled"),
+  fanStatus: $("#fanStatus"), fanToggleButton: $("#fanToggleButton"),
   jogStep: $("#jogStep"), jogValue: $("#jogValue"), safetyConfirm: $("#safetyConfirm"), engraveButton: $("#engraveButton"),
   jobStatus: $("#jobStatus"), progressPercent: $("#progressPercent"), progressBar: $("#progressBar"),
   logOutput: $("#logOutput"), clearLogButton: $("#clearLogButton"), confirmDialog: $("#confirmDialog"),
@@ -29,6 +30,7 @@ const state = {
   customFontName: null,
   currentRaster: null,
   previewReady: false,
+  fanOn: null,
   busy: false,
   cancelRequested: false,
   pendingJob: false
@@ -58,8 +60,18 @@ function updateButtons() {
   const isConnected = state.transport.connected;
   els.engraveButton.disabled = !isConnected || !state.previewReady || !els.safetyConfirm.checked || state.busy;
   els.dryRunButton.disabled = !state.previewReady || state.busy;
+  updateFanControl();
   document.querySelectorAll(".jog-btn[data-x]").forEach(button => button.disabled = !isConnected || state.busy);
   els.connectButton.disabled = state.busy;
+}
+
+function updateFanControl() {
+  const isConnected = state.transport.connected;
+  els.fanToggleButton.disabled = !isConnected || state.busy;
+  els.fanToggleButton.textContent = state.fanOn ? "Turn fan off" : "Turn fan on";
+  els.fanStatus.textContent = state.fanOn === null
+    ? "Fan state unknown."
+    : `Fan ${state.fanOn ? "on" : "off"}.`;
 }
 
 function updateProtocolControls() {
@@ -229,6 +241,7 @@ async function connectOrDisconnect() {
   if (state.transport.connected) {
     await state.transport.disconnect();
     state.protocol = null;
+    state.fanOn = null;
     setStatus(false);
     els.deviceInfo.textContent = "Disconnected. No homing command was sent.";
     return;
@@ -245,6 +258,7 @@ async function connectOrDisconnect() {
   } catch (error) {
     log(error.message, "ERROR");
     await state.transport.disconnect().catch(() => {});
+    state.fanOn = null;
     setStatus(false);
     els.deviceInfo.textContent = "Connection failed. Check the USB cable, browser support and selected device.";
   } finally {
@@ -340,9 +354,11 @@ async function runConfirmedJob() {
       setProgress(line, total);
       els.jobStatus.textContent = `Line ${line}/${total} · sent ${sent} · blank ${skipped}`;
     });
+    state.fanOn = els.fanEnabled.checked;
     els.jobStatus.textContent = result.completionConfirmed === false ? "Data sent · device completion not confirmed" : "Job data sent";
     log(`Transfer finished. ${result.sent} rows sent; ${result.skipped} blank rows skipped.`);
   } catch (error) {
+    state.fanOn = null;
     els.jobStatus.textContent = "Transfer stopped / failed";
     log(error.message, "ERROR");
     log("If the controller or laser remains active, use the engraver's physical power switch. Browser disconnect is not an emergency stop.", "WARN");
@@ -363,6 +379,22 @@ async function jog(dx, dy) {
     log(`Jog command sent: X ${x}, Y ${y} steps. The UI does not track absolute head position.`);
   } catch (error) { log(error.message, "ERROR"); }
   finally { setBusy(false); }
+}
+
+async function toggleFan() {
+  if (!state.transport.connected || !state.protocol || state.busy) return;
+  const enabled = state.fanOn !== true;
+  setBusy(true);
+  try {
+    await state.protocol.setFan(state.transport, enabled);
+    state.fanOn = enabled;
+    log(`Cooling fan switched ${enabled ? "on" : "off"}.`);
+  } catch (error) {
+    state.fanOn = null;
+    log(error.message, "ERROR");
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function loadCustomFont(file) {
@@ -430,6 +462,7 @@ function bindEvents() {
   els.dryRunButton.addEventListener("click", () => { try { buildDryRun(); } catch (error) { log(error.message, "ERROR"); } });
   els.depth.addEventListener("input", () => els.depthValue.textContent = els.depth.value);
   els.power.addEventListener("input", () => els.powerValue.textContent = `${els.power.value}%`);
+  els.fanToggleButton.addEventListener("click", toggleFan);
   els.jogStep.addEventListener("input", () => els.jogValue.textContent = `${els.jogStep.value} steps`);
   els.safetyConfirm.addEventListener("change", updateButtons);
   document.querySelectorAll(".jog-btn[data-x]").forEach(button => button.addEventListener("click", () => jog(Number(button.dataset.x), Number(button.dataset.y))));
@@ -441,6 +474,7 @@ function bindEvents() {
     navigator.serial.addEventListener("disconnect", async () => {
       log("Serial device disconnected.", "WARN");
       if (state.transport.connected) await state.transport.disconnect().catch(() => {});
+      state.fanOn = null;
       setStatus(false);
     });
   }

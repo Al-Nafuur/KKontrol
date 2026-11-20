@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildK3RowPacket, packK3Row, packLegacyRow, buildLegacyRowPacket } from "../js/raster.js";
-import { buildLegacyHeader } from "../js/protocols/legacy.js";
+import { buildLegacyHeader, LegacyProtocol } from "../js/protocols/legacy.js";
 import { K3Protocol } from "../js/protocols/k3.js";
 
 test("K3 row packs first pixel into most-significant bit", () => {
@@ -39,4 +39,17 @@ test("K3 connect uses the known-good eight-byte sequence", async () => {
   const fake = { command: async bytes => { actual = bytes; } };
   await K3Protocol.connect(fake);
   assert.deepEqual(actual, [0x0a,0x00,0x04,0x00,0xff,0x00,0x04,0x00]);
+});
+
+test("both protocols send the fan on and off commands", async () => {
+  for (const protocol of [K3Protocol, LegacyProtocol]) {
+    const calls = [];
+    const fake = { command: async (...args) => calls.push(args) };
+    await protocol.setFan(fake, true);
+    await protocol.setFan(fake, false);
+    assert.deepEqual(calls.map(([bytes, ack]) => [bytes, ack]), [
+      [[0x04,0x00,0x04,0x00], [0x09]],
+      [[0x05,0x00,0x04,0x00], [0x09]]
+    ]);
+  }
 });
